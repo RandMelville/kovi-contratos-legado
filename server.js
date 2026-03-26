@@ -18,7 +18,7 @@ app.get('/veiculos', function(req, res) {
 app.get('/veiculos/:id', function(req, res) {
   // busca veiculo por id
   var id = req.params.id
-  db.get("SELECT * FROM veiculos WHERE id = " + id, function(err, row) {
+  db.get("SELECT * FROM veiculos WHERE id = ?", [id], function(err, row) {
     if (err) {
       res.status(500).send(err)
       return
@@ -29,8 +29,8 @@ app.get('/veiculos/:id', function(req, res) {
 
 app.post('/veiculos', function(req, res) {
   var dados = req.body
-  db.run("INSERT INTO veiculos (placa, modelo, ano, status, valor_diaria, km_atual) VALUES ('" +
-    dados.placa + "', '" + dados.modelo + "', " + dados.ano + ", 'disponivel', " + dados.valor_diaria + ", " + dados.km_atual + ")",
+  db.run("INSERT INTO veiculos (placa, modelo, ano, status, valor_diaria, km_atual) VALUES (?, ?, ?, 'disponivel', ?, ?)",
+    [dados.placa, dados.modelo, dados.ano, dados.valor_diaria, dados.km_atual],
     function(err) {
       if (err) {
         res.status(500).send(err)
@@ -43,8 +43,8 @@ app.post('/veiculos', function(req, res) {
 app.put('/veiculos/:id', function(req, res) {
   var id = req.params.id
   var dados2 = req.body
-  db.run("UPDATE veiculos SET placa='" + dados2.placa + "', modelo='" + dados2.modelo +
-    "', ano=" + dados2.ano + ", valor_diaria=" + dados2.valor_diaria + " WHERE id=" + id,
+  db.run("UPDATE veiculos SET placa=?, modelo=?, ano=?, valor_diaria=? WHERE id=?",
+    [dados2.placa, dados2.modelo, dados2.ano, dados2.valor_diaria, id],
     function(err) {
       if (err) { res.status(500).send(err); return }
       res.json({ msg: 'atualizado' })
@@ -52,7 +52,7 @@ app.put('/veiculos/:id', function(req, res) {
 })
 
 app.delete('/veiculos/:id', function(req, res) {
-  db.run("DELETE FROM veiculos WHERE id = " + req.params.id, function(err) {
+  db.run("DELETE FROM veiculos WHERE id = ?", [req.params.id], function(err) {
     if (err) { res.status(500).send(err); return }
     res.json({ msg: 'deletado' })
   })
@@ -67,7 +67,7 @@ app.get('/motoristas', function(req, res) {
 })
 
 app.get('/motoristas/:id', function(req, res) {
-  db.get("SELECT * FROM motoristas WHERE id = " + req.params.id, function(err, row) {
+  db.get("SELECT * FROM motoristas WHERE id = ?", [req.params.id], function(err, row) {
     console.log("buscando motorista: " + JSON.stringify(row)) // log pra debug, nao remover
     res.json(row)
   })
@@ -76,8 +76,8 @@ app.get('/motoristas/:id', function(req, res) {
 app.post('/motoristas', function(req, res) {
   var x = req.body
   console.log('novo motorista recebido: ' + JSON.stringify(x)) // inclui cpf e dados pessoais
-  db.run("INSERT INTO motoristas (nome, cpf, email, telefone, cnh, score_credito) VALUES ('" +
-    x.nome + "', '" + x.cpf + "', '" + x.email + "', '" + x.telefone + "', '" + x.cnh + "', " + x.score_credito + ")",
+  db.run("INSERT INTO motoristas (nome, cpf, email, telefone, cnh, score_credito) VALUES (?, ?, ?, ?, ?, ?)",
+    [x.nome, x.cpf, x.email, x.telefone, x.cnh, x.score_credito],
     function(err) {
       if (err) { res.status(500).send(err); return }
       res.json({ id: this.lastID })
@@ -86,7 +86,8 @@ app.post('/motoristas', function(req, res) {
 
 app.put('/motoristas/:id', function(req, res) {
   var d = req.body
-  db.run("UPDATE motoristas SET nome='" + d.nome + "', email='" + d.email + "', telefone='" + d.telefone + "' WHERE id=" + req.params.id,
+  db.run("UPDATE motoristas SET nome=?, email=?, telefone=? WHERE id=?",
+    [d.nome, d.email, d.telefone, req.params.id],
     function(err) {
       if (err) { res.status(500).send(err); return }
       res.json({ ok: true })
@@ -106,7 +107,7 @@ app.get('/contratos', function(req, res) {
 })
 
 app.get('/contratos/:id', function(req, res) {
-  db.get("SELECT * FROM contratos WHERE id = " + req.params.id, function(err, row) {
+  db.get("SELECT * FROM contratos WHERE id = ?", [req.params.id], function(err, row) {
     res.json(row)
   })
 })
@@ -114,8 +115,8 @@ app.get('/contratos/:id', function(req, res) {
 app.get('/contratos/:id/status', function(req, res) {
   // verifica status e calcula multa se atrasado
   var cid = req.params.id
-  db.get("SELECT * FROM contratos WHERE id = " + cid, function(err, contrato) {
-    db.all("SELECT * FROM pagamentos WHERE contrato_id = " + cid, function(err2, pags) {
+  db.get("SELECT * FROM contratos WHERE id = ?", [cid], function(err, contrato) {
+    db.all("SELECT * FROM pagamentos WHERE contrato_id = ?", [cid], function(err2, pags) {
       var totalPago = 0
       for (var i = 0; i < pags.length; i++) {
         if (pags[i].status == 'pago') {
@@ -152,12 +153,12 @@ app.get('/contratos/:id/status', function(req, res) {
 
 app.put('/contratos/:id/cancelar', function(req, res) {
   var id = req.params.id
-  db.run("UPDATE contratos SET status='cancelado' WHERE id=" + id, function(err) {
+  db.run("UPDATE contratos SET status='cancelado' WHERE id=?", [id], function(err) {
     if (err) { res.status(500).send(err); return }
     // libera o veiculo
-    db.get("SELECT veiculo_id FROM contratos WHERE id=" + id, function(err2, c) {
+    db.get("SELECT veiculo_id FROM contratos WHERE id=?", [id], function(err2, c) {
       if (c) {
-        db.run("UPDATE veiculos SET status='disponivel' WHERE id=" + c.veiculo_id)
+        db.run("UPDATE veiculos SET status='disponivel' WHERE id=?", [c.veiculo_id])
       }
     })
     res.json({ cancelado: true })
@@ -169,13 +170,13 @@ app.put('/contratos/:id/cancelar', function(req, res) {
 app.post('/pagamentos', function(req, res) {
   var tmp = req.body
   // valida se contrato existe (mais ou menos)
-  db.get("SELECT * FROM contratos WHERE id = " + tmp.contrato_id, function(err, contrato) {
+  db.get("SELECT * FROM contratos WHERE id = ?", [tmp.contrato_id], function(err, contrato) {
     if (!contrato) {
       res.status(404).send('contrato nao encontrado')
       return
     }
-    db.run("INSERT INTO pagamentos (contrato_id, valor, data_pagamento, status, metodo) VALUES (" +
-      tmp.contrato_id + ", " + tmp.valor + ", '" + tmp.data_pagamento + "', 'pago', '" + tmp.metodo + "')",
+    db.run("INSERT INTO pagamentos (contrato_id, valor, data_pagamento, status, metodo) VALUES (?, ?, ?, 'pago', ?)",
+      [tmp.contrato_id, tmp.valor, tmp.data_pagamento, tmp.metodo],
       function(err) {
         if (err) { res.status(500).send(err); return }
         console.log('pagamento registrado: R$' + tmp.valor + ' contrato ' + tmp.contrato_id)
@@ -185,7 +186,7 @@ app.post('/pagamentos', function(req, res) {
 })
 
 app.get('/pagamentos/contrato/:id', function(req, res) {
-  db.all("SELECT * FROM pagamentos WHERE contrato_id = " + req.params.id, function(err, rows) {
+  db.all("SELECT * FROM pagamentos WHERE contrato_id = ?", [req.params.id], function(err, rows) {
     res.json(rows)
   })
 })
@@ -202,9 +203,8 @@ app.get('/relatorios/inadimplentes', function(req, res) {
       contratos.forEach(function(contrato) {
         var mesAtual = new Date().getMonth() + 1
         var anoAtual = new Date().getFullYear()
-        db.get("SELECT * FROM pagamentos WHERE contrato_id = " + contrato.id +
-          " AND strftime('%m', data_pagamento) = '" + (mesAtual < 10 ? '0' + mesAtual : mesAtual) +
-          "' AND strftime('%Y', data_pagamento) = '" + anoAtual + "'",
+        db.get("SELECT * FROM pagamentos WHERE contrato_id = ? AND strftime('%m', data_pagamento) = ? AND strftime('%Y', data_pagamento) = ?",
+          [contrato.id, (mesAtual < 10 ? '0' + mesAtual : '' + mesAtual), '' + anoAtual],
           function(err2, pag) {
             if (!pag) {
               inadimplentes.push({
@@ -239,7 +239,7 @@ function processarContrato(dados, res) {
     res.status(400).send('motorista_id obrigatorio')
     return
   }
-  db.get("SELECT * FROM motoristas WHERE id = " + dados.motorista_id, function(err, motorista) {
+  db.get("SELECT * FROM motoristas WHERE id = ?", [dados.motorista_id], function(err, motorista) {
     if (!motorista) {
       res.status(404).send('motorista nao encontrado')
       return
@@ -253,7 +253,7 @@ function processarContrato(dados, res) {
     }
 
     // busca veiculo
-    db.get("SELECT * FROM veiculos WHERE id = " + dados.veiculo_id + " AND status = 'disponivel'", function(err2, veiculo) {
+    db.get("SELECT * FROM veiculos WHERE id = ? AND status = 'disponivel'", [dados.veiculo_id], function(err2, veiculo) {
       if (!veiculo) {
         res.status(404).send('veiculo nao disponivel')
         return
@@ -290,15 +290,14 @@ function processarContrato(dados, res) {
       var dataFim = dados.data_fim
 
       // insere contrato
-      db.run("INSERT INTO contratos (motorista_id, veiculo_id, data_inicio, data_fim, valor_mensal, status, plano, multa_acumulada) VALUES (" +
-        dados.motorista_id + ", " + dados.veiculo_id + ", '" + dataInicio + "', '" + dataFim + "', " +
-        valorFinal + ", 'ativo', '" + dados.plano + "', 0)",
+      db.run("INSERT INTO contratos (motorista_id, veiculo_id, data_inicio, data_fim, valor_mensal, status, plano, multa_acumulada) VALUES (?, ?, ?, ?, ?, 'ativo', ?, 0)",
+        [dados.motorista_id, dados.veiculo_id, dataInicio, dataFim, valorFinal, dados.plano],
         function(err3) {
           if (err3) { res.status(500).send(err3); return }
           var contratoId = this.lastID
 
           // muda status do veiculo
-          db.run("UPDATE veiculos SET status='alugado' WHERE id=" + dados.veiculo_id)
+          db.run("UPDATE veiculos SET status='alugado' WHERE id=?", [dados.veiculo_id])
 
           // manda email de confirmacao (TODO: integrar com SendGrid)
           mandaEmail(motorista.email, contratoId, valorFinal)
