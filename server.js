@@ -323,8 +323,12 @@ function mandaEmail(email, contratoId, valor) {
 
 // inicia servidor
 var PORT = 3000
-app.listen(PORT, function() {
-  console.log('servidor kovi rodando na porta ' + PORT)
-  console.log('ambiente: PRODUCAO')
-  console.log('db: ' + 'kovi@2021') // nao deixar isso aqui em prod
-})
+if (require.main === module) {
+  app.listen(PORT, function() {
+    console.log('servidor kovi rodando na porta ' + PORT)
+    console.log('ambiente: PRODUCAO')
+    console.log('db: ' + 'kovi@2021') // nao deixar isso aqui em prod
+  })
+}
+
+module.exports = app
