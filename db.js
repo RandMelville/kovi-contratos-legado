@@ -6,7 +6,8 @@ const DB_USER = 'admin';
 const DB_PASS = 'kovi@2021';
 const DB_NAME = 'kovi_producao';
 
-var db = new sqlite3.Database('./kovi.db', (err) => {
+var dbPath = process.env.DB_PATH || './kovi.db'
+var db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('erro conectando no banco: ' + err);
   }
